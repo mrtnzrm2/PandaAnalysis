@@ -24,14 +24,14 @@ skimmer = root.PandaAnalyzer(debug_level)
 
 
 skimmer.firstEvent=0
-skimmer.lastEvent=100
-skimmer.isData=False
+skimmer.lastEvent=500
+skimmer.isData=True
 skimmer.SetFlag('puppi',False)
 skimmer.SetFlag('fatjet',False)
 skimmer.SetFlag('vbf',True)
 skimmer.SetFlag('firstGen',False)
 skimmer.SetFlag('applyEGCorr',False)
-#skimmer.SetFlag('applyJSON',False)
+skimmer.SetFlag('applyJSON',False)
 skimmer.SetFlag('pfCands',False)
 #skimmer.SetFlag('monohiggs',True)
 if skimmer.isData and False:
