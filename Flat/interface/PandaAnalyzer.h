@@ -53,11 +53,13 @@ public :
         kZ,
         kW,
         kA,
+        kZEWK,
+        kWEWK,
         kTT,
         kTop, // used for non-ttbar top
         kV, // used for non V+jets W or Z
         kH,
-        kSignal
+        kSignal,
     };
 
     enum TriggerBits {
@@ -71,7 +73,7 @@ public :
 
     PandaAnalyzer(int debug_=0);
     ~PandaAnalyzer();
-    void Init(TTree *tree, TH1D *hweights, TTree *weightNames=0);
+    int Init(TTree *tree, TH1D *hweights, TTree *weightNames=0);
     void SetOutputFile(TString fOutName);
     void ResetBranches();
     void Run();
@@ -106,15 +108,20 @@ private:
         cMuReco,      //!< MUO POG SF, tracking for mu
         cPho,         //!< EGM POG SF, contains ID for gamma
         cTrigMET,     //!< MET trigger eff        
+        cTrigMETZmm,  //!< Zmumu MET trigger eff
         cTrigEle,     //!< Ele trigger eff        
         cTrigPho,     //!< Pho trigger eff        
-        cZNLO,        //!< NLO weights for Z,W,A,A+2j
+        cZNLO,        //!< NLO weights for QCD Z,W,A,A+2j
         cWNLO,
         cANLO,
         cANLO2j,
-        cZEWK,        //!< EWK weights for Z,W,A,A+2j
+        cZEWK,        //!< EWK weights for QCD Z,W,A,A+2j
         cWEWK,
         cAEWK,
+        cVBF_ZNLO,    //!< NLO weights for QCD Z,W in VBF phase space
+        cVBF_WNLO,
+        cVBF_EWKZ,    //!< k-factors for EWK Z,W in VBF phase space
+        cVBF_EWKW,
         cN
     };
 
@@ -194,6 +201,7 @@ private:
     TFile *fOut;     // output file is owned by PandaAnalyzer
     TTree *tOut;
     GeneralTree *gt; // essentially a wrapper around tOut
+    TH1F *hDTotalMCWeight=0;
     TTree *tIn=0;    // input tree to read
     unsigned int preselBits=0;
 

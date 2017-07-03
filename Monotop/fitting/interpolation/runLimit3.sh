@@ -22,7 +22,7 @@ cd $WD
 cp -r $scramdir/src/MonoXFit_CSV .
 cd MonoXFit_CSV/datacards
 
-python scanbatch2.py "${@:2}"
+python scanbatch3.py "${@:2}"
 
 cd $WD
 #cp -r MonoXFit_CSV $fittingdir/scans/fit_${mV}_${mChi}_${model}

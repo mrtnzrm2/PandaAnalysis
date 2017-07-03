@@ -158,6 +158,10 @@ class GeneralTree : public genericTree {
 
       float scale[6];
 //ENDCUSTOMDEF
+    float sf_metTrigZmm = -1;
+    float sf_qcdV_VBF = -1;
+    int jetNMBtags = -1;
+    float pfmetRaw = -1;
     int nB = -1;
     float fj1MSDScaleUp_sj = -1;
     float fj1MSDScaleDown_sj = -1;
