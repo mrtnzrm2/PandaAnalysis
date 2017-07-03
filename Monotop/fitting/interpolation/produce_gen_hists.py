@@ -34,13 +34,14 @@ list_dir = '/home/snarayan/MonoTop/interpolation/'
 def stage_in_file(source,target):
     source = 'root://xrootd.cmsaf.mit.edu/' + source
     cmd = 'xrdcp %s %s'%(source,target)
-    print cmd
+    PInfo(sname+'.stage_in_file', cmd)
     system(cmd)
 
 # copy slowly to keep Max happy
 def stage_in_list():
     system('mkdir -p unmerged')
     flist = open(list_dir+'%i_%i.txt'%(m_V,m_DM))
+    PInfo(sname+'.stage_in_list','Reading '+list_dir+'%i_%i.txt'%(m_V,m_DM))
     for l in flist:
         in_name = l.strip()
         out_name = 'unmerged/'+in_name.split('/')[-1]
@@ -67,13 +68,15 @@ def remove(pattern):
     system(cmd)
 
 ## normalize the merged file
-def normalize():
+def get_xsec():
     params = read_nr_model(m_V,m_DM)
     if params:
         xsec = params.sigma
     else:
         exit(1)
-    
+    return xsec    
+
+def normalize(xsec):
     f = root.TFile.Open('merged.root','UPDATE')
     t = f.Get('events')
     h = root.TH1D('h','',1,-1,2)
@@ -122,10 +125,11 @@ def stageout():
     cmd = 'mv hists.root %s/interpolate/hists/%i_%i.root'%(getenv('PANDA_FITTING'),m_V,m_DM)
     system(cmd)
 
+xsec = get_xsec() # do this first in case it's missing
 stage_in_list()
 hadd()
 remove('unmerged')
-normalize()
+normalize(xsec)
 draw_all()
 remove('merged.root')
 stageout()

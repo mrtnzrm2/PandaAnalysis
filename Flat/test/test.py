@@ -24,14 +24,14 @@ skimmer = root.PandaAnalyzer(debug_level)
 
 
 skimmer.firstEvent=0
-skimmer.lastEvent=100
+skimmer.lastEvent=50
 skimmer.isData=False
 skimmer.SetFlag('puppi',False)
 skimmer.SetFlag('fatjet',False)
 skimmer.SetFlag('vbf',True)
 skimmer.SetFlag('firstGen',False)
 skimmer.SetFlag('applyEGCorr',False)
-#skimmer.SetFlag('applyJSON',False)
+skimmer.SetFlag('applyJSON',False)
 skimmer.SetFlag('pfCands',False)
 #skimmer.SetFlag('monohiggs',True)
 if skimmer.isData and False:
@@ -40,8 +40,8 @@ if skimmer.isData and False:
         for run,lumis in payload.iteritems():
             for l in lumis:
                 skimmer.AddGoodLumiRange(int(run),l[0],l[1])
-#skimmer.processType = root.PandaAnalyzer.kTT
-skimmer.processType = root.PandaAnalyzer.kWEWK
+skimmer.processType = root.PandaAnalyzer.kTT
+#skimmer.processType = root.PandaAnalyzer.kWEWK
 #skimmer.SetPreselectionBit(root.PandaAnalyzer.kFatjet)
 #system("pxrdcp %s input.root '!pfCandidates'"%(torun))
 #fin = root.TFile.Open('input.root')

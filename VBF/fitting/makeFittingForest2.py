@@ -26,7 +26,7 @@ import PandaAnalysis.VBF.PandaSelection as sel
 import ROOT as root
 
 basedir = getenv('PANDA_FLATDIR')+'/'
-lumi = 35900
+lumi = 35800
 
 def f(x):
     return basedir + x + '.root'
@@ -93,7 +93,7 @@ else:
         factory.add_process(f('MET'),'Data',is_data=True,extra_cut=sel.triggers['met'])
     # signals
     if 'signal' in region:
-        factory.add_process(f('ggFHinv'),'GGF_H125')
+        factory.add_process(f('ggFHinv_m125'),'GGF_H125')
         factory.add_process(f('vbfHinv_m125'),'VBF_H125')
 
 factory.run(basedir+'/fitting/fittingForest_%s.root'%out_region)
