@@ -488,15 +488,15 @@ bool PandaAnalyzer::PassPreselection() {
     }
   }
   if (preselBits & kMonojet) {
-    if (true) {
-      if ( max_pfDown>200 || max_pf>200 || max_pfUp>200 || max_puppi>200 ) {
+    if (gt->nJet>=1 && gt->jet1Pt>100) {
+      if ( max_pfDown>250 || max_pf>250 || max_pfUp>250 || max_puppi>250 ) {
         isGood = true;
       }
     }
   }
   if (preselBits & kMonohiggs) {
-    if ((gt->nFatjet>=1 && gt->fj1Pt>200) || gt->hbbpt>150 ) {
-      if ( max_pf>175 || max_puppi>175) {
+    if (gt->nFatjet>=1 && gt->fj1Pt>150) {
+      if ( max_pf>250 || max_puppi>250) {
         isGood = true;
       }
     }
@@ -1161,9 +1161,9 @@ void PandaAnalyzer::Run() {
         float rawpt = fj.rawPt;
         float eta = fj.eta();
         float mass = fj.m();
-        float ptcut = 200;
+        float ptcut = 150;
         if (doMonoH)
-          ptcut = 200;
+          ptcut = 150;
 
         if (pt<ptcut || fabs(eta)>2.4 || !fj.monojet)
           continue;
