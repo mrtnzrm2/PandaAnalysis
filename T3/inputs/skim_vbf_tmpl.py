@@ -217,7 +217,8 @@ def drop_branches(to_drop=None, to_keep=None):
 
 
 def stageout(outdir,outfilename):
-    mvargs = 'mv $PWD/output.root %s/%s'%(outdir,outfilename)
+#    mvargs = 'mv $PWD/output.root %s/%s'%(outdir,outfilename)
+    mvargs = 'xrdcp $PWD/output.root root://cmseos.fnal.gov/%s/%s'%(outdir,outfilename)
     PInfo(sname,mvargs)
     ret = system(mvargs)
     system('rm *.root')
@@ -226,7 +227,7 @@ def stageout(outdir,outfilename):
     else:
         PError(sname+'.stageout','Move exited with code %i'%ret)
         return ret
-    if not path.isfile('%s/%s'%(outdir,outfilename)):
+    if not path.isfile('root://cmseos.fnal.gov/%s/%s'%(outdir,outfilename)):
         PError(sname+'.stageout','Output file is missing!')
         ret = 1
     return ret
