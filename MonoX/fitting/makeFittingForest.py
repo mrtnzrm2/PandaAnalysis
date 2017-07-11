@@ -23,8 +23,8 @@ argv=[]
 import PandaAnalysis.Flat.fitting_forest as forest 
 from PandaCore.Tools.Misc import *
 import PandaCore.Tools.Functions # kinematics
-import PandaAnalysis.Monotop.CombinedBVetoSelection as sel
-#import PandaAnalysis.Monotop.CombinedSelection as sel
+#import PandaAnalysis.MonoH.Selection_doubleb as sel
+import PandaAnalysis.Monotop.CombinedSelection as sel
 
 basedir = getenv('PANDA_FLATDIR')+'/'
 lumi = 35900
@@ -55,8 +55,8 @@ def shift_btags(additional=None):
             shifted_weights[shiftedlabel] = weight
     return shifted_weights
 
-
-vmap = {'top_ecf_bdt':'top_ecf_bdt'}
+vmap = {}
+#vmap = {'top_ecf_bdt':'top_ecf_bdt'}
 mc_vmap = {'genBosonPt':'genBosonPt'}
 if region in ['signal','test']:
     u,uphi, = ('pfmet','pfmetphi')
@@ -67,7 +67,10 @@ elif 'single' in region:
 elif 'di' in region:
     u,uphi = ('pfUZmag','pfUZphi')
 vmap['met'] = 'min(%s,999.9999)'%u 
-
+vmap['fj1Pt'] = 'fj1Pt'
+vmap['fj1MSD_corr'] = 'fj1MSD_corr'
+vmap['fj1ECFN_2_3_10'] = 'fj1ECFN_2_3_10'
+vmap['fj1ECFN_1_2_10'] = 'fj1ECFN_1_2_10'
 
 weights = {'nominal' : sel.weights[region]%lumi}
 if couplings:
