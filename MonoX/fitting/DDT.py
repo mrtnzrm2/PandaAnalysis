@@ -9,7 +9,7 @@ import sys
 import pdb
 
 def ComputeDDT(name, point, nPtBins, nRhoBins, H):
-	DDT = TH2F(name, "", nRhoBins, -6, -1, nPtBins, 175, 825)
+	DDT = TH2F(name, "", nRhoBins, -6, -1.5, nPtBins, 200, 800)
 	DDT.SetStats(0)
 	nXb = H.GetXaxis().GetNbins()
 	nYb = H.GetYaxis().GetNbins()
@@ -32,33 +32,56 @@ def DisplayDDT(DDT, Title, SaveName):
 	DDT.Draw("COLZ")
 	C.Print("MAP_"+SaveName+".gif")
 
-H3 = TH3F("H3", "", 10, -6, -1, 13, 175, 825, 500, 0, 0.5)
-H3.SetStats(0)
-Bkgs =["QCDmvaEVwithExtv3.root", "GJetsmvaEVv3.root"]
-for B in Bkgs:
+
+
+#Bkgs =["/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/control/TTbar.root", "/data/t3home000/jorgem/lpc/mcremone/panda/v_8026_0_4/flat/control/WJets.root","/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/ZJets.root"]
+#Bkgs_tags=[("TTbar","/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/control/TTbar.root"),("WJets","/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/control/WJets.root"),("ZJets","/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/control/ZJets.root")]
+#Bkgs_tags=[("TTbar","/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/control/TTbar.root"),("WJets","/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/control/WJets.root"),("ZJets","/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/control/ZJets.root")]
+Bkgs_tags=[("Diboson","/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/control///fitting/fittingForest_test.root")]
+H3={}
+
+
+for bks,B in Bkgs_tags:
+
+	H3[bks] = TH3F("H3_%s"%(bks), "H3_%s"%(bks), 9, -6, -1.5, 12, 200, 800, 500, 0, 0.5)
+	
+for bks,B in Bkgs_tags:
+
+	print 'Starting with '+bks+'-------------------------- :)'
+
+	H3[bks].SetStats(0)
 	F = TFile(B)
-	T = F.Get("Events")
+	if "test" in B:
+		tree = "Diboson_test"
+	T = F.Get("%s"%tree)
 	n = T.GetEntries()
 	for j in range(0, n): # Here is where we loop over all events.
+                if(j % (1 * n/100) == 0):
+                        sys.stdout.write("\r[" + "="*int(20*j/n) + " " + str(round(100.*j/n,0)) + "% done")
+                        sys.stdout.flush()
 		T.GetEntry(j)
-		weight = T.puWeight*T.scale1fb*T.kfactor*T.kfactorNLO
-		if T.vpho0_pt>175 and T.vpho0_mva > 0.5 and T.AK8Puppijet0_pt>175: # photon requirement
-			PT = T.AK8Puppijet0_pt
-			preRHO = T.AK8Puppijet0_msd*T.AK8Puppijet0_msd/T.AK8Puppijet0_pt/T.AK8Puppijet0_pt
-			if preRHO > 0.:
-				RHO = math.log(preRHO)
-				if RHO < -1 and RHO > -6 and T.AK8Puppijet0_N2sdb1 > 0.:
-					t3pho = TVector3()
-					t3pho.SetPtEtaPhi(T.vpho0_pt, T.vpho0_eta, T.vpho0_phi)
-					t3jet = TVector3()
-					t3jet.SetPtEtaPhi(T.AK8Puppijet0_pt, T.AK8Puppijet0_eta, T.AK8Puppijet0_phi)
-					if t3pho.DeltaR(t3jet) > 2.2:
-						H3.Fill(RHO, PT, T.AK8Puppijet0_N2sdb1, weight)
-
-DDT_photon = ComputeDDT("DDT_photon", 0.05, 13, 10, H3)
-DisplayDDT(DDT_photon, "DDT vals at 5%", "DDT_photon")
-
-Fout = TFile("PhotonDDTs.root", "recreate")
+		#weight = T.puWeight*T.scale1fb*T.kfactor*T.kfactorNLO
+		weight = 1
+		PT = T.fj1Pt
+		preRHO = T.fj1MSD_corr*T.fj1MSD_corr/T.fj1Pt/T.fj1Pt
+		if preRHO > 0. and T.fj1ECFN_1_2_10 != 0.:
+			RHO = math.log(preRHO)
+			jtN2b1sd_8 = T.fj1ECFN_2_3_10/math.pow(T.fj1ECFN_1_2_10,2.00)
+			if PT > 200 and RHO < -1.5 and RHO > -6.0 and jtN2b1sd_8 > 0.:
+				H3[bks].Fill(RHO, PT, jtN2b1sd_8, weight)
+DDT_5by6={}
+DDT_5by3={}
+Fout = TFile("DDTs.root", "recreate")
 Fout.cd()
-DDT_photon.Write()
+for key in H3:
+	DDT_5by6[key]=ComputeDDT('DDT_5by6_%s'%(key), 0.05, 12, 9, H3[key])
+	DDT_5by6[key].Write()
+	DDT_5by3[key]=ComputeDDT('DDT_5by3_%s'%(key), 0.05, 3, 9, H3[key])
+	DDT_5by3[key].Write()
 Fout.Close()
+
+#DDT_5by6 = ComputeDDT("DDT_5by6", 0.05, 12, 9, H3)
+#DisplayDDT(DDT_5by6, "DDT vals at 5%", "DDT_5by6")
+#DDT_5by3 = ComputeDDT("DDT_5by3", 0.05, 3, 9, H3)
+#DisplayDDT(DDT_5by3, "DDT vals at 5%", "DDT_5by3")
+

@@ -5,13 +5,14 @@ export SUBMIT_NAME="v_8026_0_4"
 export PANDA="${CMSSW_BASE}/src/PandaAnalysis"
 #export PANDA_CFG="http://t3serv001.mit.edu/~snarayan/histcatalog/20170316.cfg"
 #export PANDA_CFG="http://t3serv001.mit.edu/~snarayan/histcatalog/20170501_ttdm.cfg"
-export PANDA_CFG="http://t3serv001.mit.edu/~mcremone/histcatalog/test.cfg"
+#export PANDA_CFG="http://t3serv001.mit.edu/~mcremone/histcatalog/test.cfg"
+export PANDA_CFG="http://t3serv001.mit.edu/~snarayan/histcatalog/20170522_004.cfg"
 export PANDA_FLATDIR="/uscms_data/d3/matteoc/panda/"${SUBMIT_NAME}"/flat/"
 #export PANDA_FLATDIR="/data/t3home000/mcremone/lpc/jorgem/panda/"${SUBMIT_NAME}"/flat/control/"                                                                                                            
 mkdir -p $PANDA_FLATDIR
 
 #export SUBMIT_TMPL="skim_monojet_tmpl.py" ####
-export SUBMIT_TMPL="skim_vbf_tmpl.py"
+export SUBMIT_TMPL="skim_monoJ_tmpl.py"
                                                                                                                                             
 export SUBMIT_WORKDIR="/uscms_data/d3/matteoc/condor/"${SUBMIT_NAME}"/work/"
 export SUBMIT_LOGDIR="/uscms_data/d3/matteoc/condor/"${SUBMIT_NAME}"/logs/"
