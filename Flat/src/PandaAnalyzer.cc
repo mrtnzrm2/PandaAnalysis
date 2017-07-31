@@ -344,6 +344,7 @@ void PandaAnalyzer::SetDataDir(const char *s) {
   btagReaders[bSubJetL]->load(*sj_btagCalib,BTagEntry::FLAV_C,"lt");
   btagReaders[bSubJetL]->load(*sj_btagCalib,BTagEntry::FLAV_UDSG,"incl");
 
+  //the Medium working
   btagReaders[bJetM] = new BTagCalibrationReader(BTagEntry::OP_MEDIUM,"central",{"up","down"});
   btagReaders[bJetM]->load(*btagCalib,BTagEntry::FLAV_B,"comb");
   btagReaders[bJetM]->load(*btagCalib,BTagEntry::FLAV_C,"comb");
@@ -530,7 +531,7 @@ void PandaAnalyzer::CalcBJetSFs(BTagType bt, int flavor,
 }
 
 void PandaAnalyzer::EvalBTagSF(std::vector<btagcand> &cands, std::vector<double> &sfs,
-               GeneralTree::BTagShift shift,GeneralTree::BTagJet jettype, bool do2) 
+			       GeneralTree::BTagShift shift,GeneralTree::BTagJet jettype, bool do2) 
 {
   float sf0 = 1, sf1 = 1, sfGT0 = 1, sf2=1;
   float prob_mc0=1, prob_data0=1;
@@ -540,24 +541,24 @@ void PandaAnalyzer::EvalBTagSF(std::vector<btagcand> &cands, std::vector<double>
   for (unsigned int iC=0; iC!=nC; ++iC) {
     double sf_i = sfs[iC];
     double eff_i = cands[iC].eff;
-    prob_mc0 *= (1-eff_i);
-    prob_data0 *= (1-sf_i*eff_i);
+    prob_mc0 *= (1-eff_i); // denominator for 0 b-tag
+    prob_data0 *= (1-sf_i*eff_i); // nominator for 0 b-tag
     float tmp_mc1=1, tmp_data1=1;
     for (unsigned int jC=0; jC!=nC; ++jC) {
       if (iC==jC) continue;
       double sf_j = sfs[jC];
       double eff_j = cands[jC].eff;
-      tmp_mc1 *= (1-eff_j);
+      tmp_mc1 *= (1-eff_j); 
       tmp_data1 *= (1-eff_j*sf_j);
     }
-    prob_mc1 += eff_i * tmp_mc1;
-    prob_data1 += eff_i * sf_i * tmp_data1;
+    prob_mc1 += eff_i * tmp_mc1; // denominator for 1 b-tag
+    prob_data1 += eff_i * sf_i * tmp_data1; // nominator for 1 b-tag
   }
   
   if (nC>0) {
     sf0 = prob_data0/prob_mc0;
     sf1 = prob_data1/prob_mc1;
-    sfGT0 = (1-prob_data0)/(1-prob_mc0);
+    sfGT0 = (1-prob_data0)/(1-prob_mc0); // all b-tag (negating 0 b-tag)
   }
 
   GeneralTree::BTagParams p;
@@ -579,11 +580,11 @@ void PandaAnalyzer::EvalBTagSF(std::vector<btagcand> &cands, std::vector<double>
         for (unsigned int kC=0; kC!=nC; ++kC) {
           if (kC==iC || kC==jC) continue;
           double sf_k = sfs[kC], eff_k = cands[kC].eff;
-          tmp_mc2 *= (1-eff_k);
+          tmp_mc2 *= (1-eff_k); 
           tmp_data2 *= (1-eff_k*sf_k);
         }
-        prob_mc2 += eff_i * eff_j * tmp_mc2;
-        prob_data2 += eff_i * sf_i * eff_j * sf_j * tmp_data2;
+        prob_mc2 += eff_i * eff_j * tmp_mc2; // denominator for 2 b-tag
+        prob_data2 += eff_i * sf_i * eff_j * sf_j * tmp_data2; // nominator for 2 b-tag
       }
     }
 
@@ -625,7 +626,7 @@ void PandaAnalyzer::RegisterTrigger(TString path, std::vector<unsigned> &idxs) {
 void PandaAnalyzer::Run() {
 
   // INITIALIZE --------------------------------------------------------------------------
-
+  
   unsigned int nEvents = tIn->GetEntries();
   unsigned int nZero = 0;
   if (lastEvent>=0 && lastEvent<(int)nEvents)
@@ -765,29 +766,28 @@ void PandaAnalyzer::Run() {
     ResetBranches();
     event.getEntry(*tIn,iE);
 
-
     tr.TriggerEvent(TString::Format("GetEntry %u",iE));
     if (DEBUG>2) {
       PDebug("PandaAnalyzer::Run::Dump","");
       event.print(std::cout, 2);
       std::cout << std::endl;
       PDebug("PandaAnalyzer::Run::Dump","");
-      event.photons.print(std::cout, 2);
+      event.photons.print(std::cout, 2);       // photon branch
       std::cout << std::endl;
       PDebug("PandaAnalyzer::Run::Dump","");
-      event.muons.print(std::cout, 2);
+      event.muons.print(std::cout, 2);         // muons branch
       std::cout << std::endl;
       PDebug("PandaAnalyzer::Run::Dump","");
-      event.electrons.print(std::cout, 2);
+      event.electrons.print(std::cout, 2);     // electron branch
       std::cout << std::endl;
       PDebug("PandaAnalyzer::Run::Dump","");
-      event.chsAK4Jets.print(std::cout, 2);
+      event.chsAK4Jets.print(std::cout, 2);    // chsAK4Jets branch
       std::cout << std::endl;
       PDebug("PandaAnalyzer::Run::Dump","");
-      event.pfMet.print(std::cout, 2);
+      event.pfMet.print(std::cout, 2);         // pfMet branch
       std::cout << std::endl;
       PDebug("PandaAnalyzer::Run::Dump","");
-      event.metMuOnlyFix.print(std::cout, 2);
+      event.metMuOnlyFix.print(std::cout, 2);  // metMuOnlyFix branch
       std::cout << std::endl;
     }
 
@@ -1642,6 +1642,8 @@ void PandaAnalyzer::Run() {
     if (!PassPreselection())
       continue;
 
+    std::cout<<"Pass Preselection"<<std::endl;
+
     tr.TriggerEvent("presel");
 
     // identify interesting gen particles for fatjet matching
@@ -1918,7 +1920,7 @@ void PandaAnalyzer::Run() {
     }
 
     tr.TriggerEvent("fatjet gen-matching");
-
+    
     if (!isData) {
       // now get the jet btag SFs
       vector<btagcand> btagcands;
@@ -1988,44 +1990,56 @@ void PandaAnalyzer::Run() {
 
         }
 
-        /* // I'm killing this temporarily as we don't use it -SN
+        // I'm killing this temporarily as we don't use it -SN
+	// I AM ENABLING THIS PART
         if (doMonoH){
           // alternate stuff for inclusive jet collection (also different b tagging WP)
+	  std::cout<<"B-tagging Medium SF evaluating"<<std::endl;
           double sf_alt(1),sfUp_alt(1),sfDown_alt(1);
-          CalcBJetSFs("jet_M",flavor,eta,pt,eff,btagUncFactor,sf_alt,sfUp_alt,sfDown_alt);
+
+	  //Calculating medium working point SF
+          CalcBJetSFs(bJetM,flavor,eta,pt,eff,btagUncFactor,sf_alt,sfUp_alt,sfDown_alt); //
           btagcands_alt.push_back(btagcand(iJ,flavor,eff,sf_alt,sfUp_alt,sfDown_alt));
           sf_cent_alt.push_back(sf_alt);
+	  ////
           if (flavor>0) {
             sf_bUp_alt.push_back(sfUp_alt); sf_bDown_alt.push_back(sfDown_alt);
             sf_mUp_alt.push_back(sf_alt); sf_mDown_alt.push_back(sf_alt);
           } else {
             sf_bUp_alt.push_back(sf_alt); sf_bDown_alt.push_back(sf_alt);
             sf_mUp_alt.push_back(sfUp_alt); sf_mDown_alt.push_back(sfDown_alt);
-          }
-        }
-        */
+	    }
+	    
+	}
+        
       } // loop over jets
 
-      EvalBTagSF(btagcands,sf_cent,GeneralTree::bCent,GeneralTree::bJet);
-      EvalBTagSF(btagcands,sf_bUp,GeneralTree::bBUp,GeneralTree::bJet);
-      EvalBTagSF(btagcands,sf_bDown,GeneralTree::bBDown,GeneralTree::bJet);
-      EvalBTagSF(btagcands,sf_mUp,GeneralTree::bMUp,GeneralTree::bJet);
-      EvalBTagSF(btagcands,sf_mDown,GeneralTree::bMDown,GeneralTree::bJet);
+      //ENABLE 2-btag SF 
+      // isojet with Low working points
+      EvalBTagSF(btagcands,sf_cent,GeneralTree::bCent,GeneralTree::bJet,false);
+      EvalBTagSF(btagcands,sf_bUp,GeneralTree::bBUp,GeneralTree::bJet,false);
+      EvalBTagSF(btagcands,sf_bDown,GeneralTree::bBDown,GeneralTree::bJet,false);
+      EvalBTagSF(btagcands,sf_mUp,GeneralTree::bMUp,GeneralTree::bJet,false);
+      EvalBTagSF(btagcands,sf_mDown,GeneralTree::bMDown,GeneralTree::bJet,false);
 
-      /* // see above, also needs to use the new functions -SN
+      // see above, also needs to use the new functions -SN
+      
       if (flags["monohiggs"]) {
-        EvalBTagSF(btagcands_alt,sf_cent_alt,
-              gt->sf_btag0_alt,gt->sf_btag1_alt,gt->sf_btag2_alt,gt->sf_btagGT0_alt);
-        EvalBTagSF(btagcands_alt,sf_bUp_alt,
-              gt->sf_btag0BUp_alt,gt->sf_btag1BUp_alt,gt->sf_btag2BUp_alt,gt->sf_btagGT0BUp_alt);
-        EvalBTagSF(btagcands_alt,sf_bDown_alt,
-              gt->sf_btag0BDown_alt,gt->sf_btag1BDown_alt,gt->sf_btag2BDown_alt,gt->sf_btagGT0BDown_alt);
-        EvalBTagSF(btagcands_alt,sf_mUp_alt,
-              gt->sf_btag0MUp_alt,gt->sf_btag1MUp_alt,gt->sf_btag2MUp_alt,gt->sf_btagGT0MUp_alt);
-        EvalBTagSF(btagcands_alt,sf_mDown_alt,
-              gt->sf_btag0MDown_alt,gt->sf_btag1MDown_alt,gt->sf_btag2MDown_alt,gt->sf_btagGT0MDown_alt);
+
+	EvalBTagSF(btagcands_alt,sf_cent_alt,GeneralTree::bCent,GeneralTree::bMedJet,true);
+	EvalBTagSF(btagcands_alt,sf_bUp_alt, GeneralTree::bBUp, GeneralTree::bMedJet,true);
+	EvalBTagSF(btagcands_alt,sf_bDown_alt, GeneralTree::bBDown, GeneralTree::bMedJet,true);
+	EvalBTagSF(btagcands_alt,sf_mUp_alt, GeneralTree::bMUp, GeneralTree::bMedJet,true);
+	EvalBTagSF(btagcands_alt,sf_mDown_alt, GeneralTree::bMDown, GeneralTree::bMedJet,true);
+	
+        //EvalBTagSF(btagcands_alt,sf_cent_alt, gt->sf_btag0_alt,gt->sf_btag1_alt,gt->sf_btag2_alt,gt->sf_btagGT0_alt);
+	//EvalBTagSF(btagcands_alt,sf_bUp_alt, gt->sf_btag0BUp_alt,gt->sf_btag1BUp_alt,gt->sf_btag2BUp_alt,gt->sf_btagGT0BUp_alt);
+	//EvalBTagSF(btagcands_alt,sf_bDown_alt, gt->sf_btag0BDown_alt,gt->sf_btag1BDown_alt,gt->sf_btag2BDown_alt,gt->sf_btagGT0BDown_alt);
+	//EvalBTagSF(btagcands_alt,sf_mUp_alt, gt->sf_btag0MUp_alt,gt->sf_btag1MUp_alt,gt->sf_btag2MUp_alt,gt->sf_btagGT0MUp_alt);
+	//EvalBTagSF(btagcands_alt,sf_mDown_alt, gt->sf_btag0MDown_alt,gt->sf_btag1MDown_alt,gt->sf_btag2MDown_alt,gt->sf_btagGT0MDown_alt);
+	
       }
-      */
+      
     }
 
     tr.TriggerEvent("ak4 gen-matching");

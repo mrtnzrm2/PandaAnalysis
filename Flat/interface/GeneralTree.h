@@ -43,6 +43,7 @@ class GeneralTree : public genericTree {
       };
       enum BTagJet {
         bJet=0,
+	bMedJet,
         bSubJet,
         bNJet
       };
@@ -86,6 +87,8 @@ class GeneralTree : public genericTree {
           TString s = "sf_";
           if (p.jet==bSubJet)
             s += "sj";
+	  if (p.jet==bMedJet)
+	    s += "Med";
           s += "btag";
           switch (p.tag) {
             case b0:

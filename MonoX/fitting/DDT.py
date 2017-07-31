@@ -7,6 +7,17 @@ import math
 from math import *
 import sys
 import pdb
+import os
+import argparse
+
+parser = argparse.ArgumentParser(description='make forest')
+parser.add_argument('--region',metavar='region',type=str,default=None)
+parser.add_argument('--output',metavar='output',type=str,default='')
+parser.add_argument('--input',metavar='input',type=str,default='/data/t3home000/mcremone/lpc/jorgem/skim/v_8026_0_4/monohiggs_boosted/')
+region = parser.parse_args().region
+basedir = parser.parse_args().input
+foredir = parser.parse_args().output
+
 
 def ComputeDDT(name, point, nPtBins, nRhoBins, H):
 	DDT = TH2F(name, "", nRhoBins, -6, -1.5, nPtBins, 200, 800)
@@ -31,19 +42,95 @@ def DisplayDDT(DDT, Title, SaveName):
 	DDT.GetYaxis().SetTitle("jet p_{T}")
 	DDT.Draw("COLZ")
 	C.Print("MAP_"+SaveName+".gif")
+	C.SaveAs("DDT_"+SaveName+".pdf")
 
-
-
+def setlist(path):
+	f = []
+	if os.path.isfile(path):
+		if not "root" in path:
+			print "ERROR PLEASE INSERT A THE PATH OF A FOLDER WITH ROOT FILES OR THE PATH TO A ROOT FILE"
+			sys.exit("Error message")
+		if "/" in path:	
+			f_ = path.split("/")[-1]
+			if "." in f_:
+				f_ = f_.split(".")[0]
+		f.append((f_,path))	
+	if os.path.isdir(path):
+		#print "hello"
+		lroot = os.listdir(path)
+		#print lroot
+		for lr in lroot:
+			if 'DDT' in lr: continue
+			if "." in lr:
+				f_ = lr.split(".")[0]
+				f.append((f_,path+'/'+lr))
+	#print f
+	return f
+def outname(path):
+	if os.path.isdir(path):
+		f = path.split("/")[-1]
+		return path,f
+	if os.path.isfile(path):
+		f = path.split("/")[0:-1]
+		fs = path.split("/")[-2]
+		for g in f:
+			fg = g+'/'
+		return fg,fs
+	else: return sys.env('SKIM_MONOHIGGS_BOOSTED_FLATDIR'),"random"
 #Bkgs =["/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/control/TTbar.root", "/data/t3home000/jorgem/lpc/mcremone/panda/v_8026_0_4/flat/control/WJets.root","/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/ZJets.root"]
 #Bkgs_tags=[("TTbar","/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/control/TTbar.root"),("WJets","/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/control/WJets.root"),("ZJets","/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/control/ZJets.root")]
 #Bkgs_tags=[("TTbar","/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/control/TTbar.root"),("WJets","/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/control/WJets.root"),("ZJets","/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/control/ZJets.root")]
-Bkgs_tags=[("Diboson","/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/control///fitting/fittingForest_test.root")]
+#Bkgs_tags=[("Diaboson","/data/t3home000/mcremone/lpc/jorgem/panda/v_8026_0_4/flat/control///fitting/fittingForest_test.root")]
+toProcess = region
+#selection of process
+subfolder = ''
+if toProcess=='signal':
+  subfolder = 'sr/'
+elif toProcess=='wmn':
+  subfolder = 'cr_w_mu/'
+elif toProcess=='wmn_fail':
+  subfolder = 'cr_w_mu/'
+elif toProcess=='wen':
+  subfolder = 'cr_w_el/'
+elif toProcess=='wen_fail':
+  subfolder = 'cr_w_el/'
+elif toProcess=='tm':
+  subfolder = 'cr_ttbar_mu/'
+elif toProcess=='tm_fail':
+  subfolder = 'cr_ttbar_mu/'
+elif toProcess=='te':
+  subfolder = 'cr_ttbar_el/'
+elif toProcess=='te_fail':
+  subfolder = 'cr_ttbar_el/'
+elif toProcess=='zmm':
+  subfolder = 'cr_dimuon/'
+elif toProcess=='zmm_fail':
+  subfolder = 'cr_dimuon/'
+elif toProcess=='zee':
+  subfolder = 'cr_dielectron/'
+elif toProcess=='zee_fail':
+  subfolder = 'cr_dielectron/'
+elif toProcess=='pho':
+  subfolder = 'cr_gamma/'
+elif toProcess=='pho_fail':
+  subfolder = 'cr_gamma/'
+
+path_ = basedir
+if region: path_ = basedir+'/'+subfolder
+
+#print path_
+if path_ :
+	Bkgs_tags = setlist(path_)
+#print Bkgs_tags
 H3={}
 
 
 for bks,B in Bkgs_tags:
 
 	H3[bks] = TH3F("H3_%s"%(bks), "H3_%s"%(bks), 9, -6, -1.5, 12, 200, 800, 500, 0, 0.5)
+if  foredir == '': 
+	print 'No output: Taking default one'
+	foredir = path_
 	
 for bks,B in Bkgs_tags:
 
@@ -51,14 +138,21 @@ for bks,B in Bkgs_tags:
 
 	H3[bks].SetStats(0)
 	F = TFile(B)
+	#print B
+	tree = "events"
 	if "test" in B:
 		tree = "Diboson_test"
 	T = F.Get("%s"%tree)
+	#print T
 	n = T.GetEntries()
+	print n
 	for j in range(0, n): # Here is where we loop over all events.
+		'''
+		print  j % (1 * n/100)
                 if(j % (1 * n/100) == 0):
                         sys.stdout.write("\r[" + "="*int(20*j/n) + " " + str(round(100.*j/n,0)) + "% done")
                         sys.stdout.flush()
+		'''
 		T.GetEntry(j)
 		#weight = T.puWeight*T.scale1fb*T.kfactor*T.kfactorNLO
 		weight = 1
@@ -71,17 +165,17 @@ for bks,B in Bkgs_tags:
 				H3[bks].Fill(RHO, PT, jtN2b1sd_8, weight)
 DDT_5by6={}
 DDT_5by3={}
-Fout = TFile("DDTs.root", "recreate")
+print "%s/DDT.root"%(foredir)
+Fout = TFile("%s/DDT.root"%foredir, "recreate")
 Fout.cd()
 for key in H3:
 	DDT_5by6[key]=ComputeDDT('DDT_5by6_%s'%(key), 0.05, 12, 9, H3[key])
+	#DisplayDDT(DDT_5by6[key], "DDT vals at 5%", "DDT_5by6")
 	DDT_5by6[key].Write()
 	DDT_5by3[key]=ComputeDDT('DDT_5by3_%s'%(key), 0.05, 3, 9, H3[key])
+	#DisplayDDT(DDT_5by3[key], "DDT vals at 5%", "DDT_5by3")
 	DDT_5by3[key].Write()
 Fout.Close()
-
 #DDT_5by6 = ComputeDDT("DDT_5by6", 0.05, 12, 9, H3)
-#DisplayDDT(DDT_5by6, "DDT vals at 5%", "DDT_5by6")
+#DisplayDDT(DDT_5by[]6, "DDT vals at 5%", "DDT_5by6")
 #DDT_5by3 = ComputeDDT("DDT_5by3", 0.05, 3, 9, H3)
-#DisplayDDT(DDT_5by3, "DDT vals at 5%", "DDT_5by3")
-
