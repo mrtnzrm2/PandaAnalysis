@@ -12,6 +12,9 @@ parser = argparse.ArgumentParser(description='make forest')
 parser.add_argument('--region',metavar='region',type=str,default=None)
 parser.add_argument('--couplings',metavar='couplings',type=str,default=None)
 parser.add_argument('--var',metavar='var',type=str,default=None)
+parser.add_argument('--input',metavar='input',type=str,default='/uscms_data/d3/jmartine/panda/v_8026_0_4/flat/')
+parser.add_argument('--output',metavar='output',type=str,default='/uscms_data/d3/jmartine/panda/v_8026_0_4/limits')
+parser.add_argument('--cr',metavar='cr',type=str,default=None)
 args = parser.parse_args()
 couplings = args.couplings
 nddt = args.var
@@ -37,6 +40,10 @@ import PandaAnalysis.MonoH.Selection_doubleb as sel
 toProcess = out_region
 
 #Addtional selection
+
+ttbar_mistag_SF = "1.03*"
+signal_eff_SF = "((fj1Pt<350)*0.91+(fj1Pt>350)*1)*"
+
 
 weights_ttbar = {'ttbar_mistag_SF':"1.03*"}
 weights_signal = {'signal_eff_SF':"((fj1Pt<350)*0.91+(fj1Pt>350)*1)*"}
@@ -75,24 +82,17 @@ elif toProcess=='pho':
 elif toProcess=='pho_fail':
   subfolder = 'cr_gamma/'
 
-basedir = getenv('SKIM_MONOHIGGS_BOOSTED_FLATDIR')+'/%s'%subfolder
+basedir = args.input #getenv('SKIM_MONOHIGGS_BOOSTED_FLATDIR')+'/%s'%subfolder
+if args.cr:
+	basedir = args.input+'/%s'%subfolder
 lumi = 35900
 
 def f(x):
     return basedir + x + '.root'
 
-def transfile(process):
-	name = subfolder.split("/")[0]
-	trans = r.TFile(basedir+'/DDT_%s.root'%name)
-	corrF56 = trans.Get("DDT_5by6_%s"%process)
-	corrF53 = trans.Get("DDT_5by3_%s"%process)
-	trans.Close()
-
-	h = [corrF56,corrF53]
-	return h
 def addN2DDT(process):
 	name = subfolder.split("/")[0]
-	trans = r.TFile(basedir+'/DDT_%s.root'%name)
+	trans = r.TFile(basedir+'/DDT.root')
 	f56 = trans.Get("DDT_5by6_%s"%process)
 	f53 = trans.Get("DDT_5by3_%s"%process)
 	fi = r.TFile(f(process),"update")
@@ -147,7 +147,7 @@ def addN2DDT(process):
 
 
 
-def shift_btags(additional=None):
+def shift_btags(additional=None,signal=0):
     shifted_weights = {}
     #if not any([x in region for x in ['signal','top','w']]):
     #    return shifted_weights 
@@ -164,13 +164,38 @@ def shift_btags(additional=None):
                 shiftedlabel += 'Up'
             else:
                 shiftedlabel += 'Down'
-            weight = sel.weights[region+'_'+cent+shift]%lumi
+            weight = sel.weights[out_region+'_'+cent+shift]%lumi
+            if signal==1:
+                weight = weight + signal_eff_SF
+            if signal==2:
+                weight = weight + ttbar_mistag_SF
             if additional:
                 weight = tTIMES(weight,additional)
             shifted_weights[shiftedlabel] = weight
     return shifted_weights
 
-
+#def shiftScalesPDF(additional=None,signal=0):
+#	shifted_weights = {}
+#	for shift in ['ScaleUp','ScaleDown','PDFUp','PDFDown']:
+#         	weight = sel.weights[out_region+'_'+shift]%lumi
+#                if signal==1:
+#       		      weight = weight + signal_eff_SF
+#    		if signal==2:
+#                      weight = weight + ttbar_mistag_SF
+#
+#                shiftedlabel = '_'
+#                if 'Scale' in shift:
+#		      shiftedlabel += 'Scale'
+#	        else:
+#	  	      shiftedlabel += 'PDF'
+#	        if 'Up' in shift:
+#		      shiftedlabel += 'Up'
+#	        else:
+#		      shiftedlabel += 'Down'
+#		if additional:
+#                      weight = tTIMES(weight,additional)
+#                shifted_weights[shiftedlabel] = weight
+#        return shifted_weights
 #vmap definition
 vmap = {}
 mc_vmap = {'genBosonPt':'genBosonPt'}
@@ -183,23 +208,27 @@ elif 'wmn'or 'wen' or 'te' or 'tm' in region:
 elif 'zee'  or 'zmn' in region:
     u,uphi = ('puppiUZmag','dphipuppiUZ')
 vmap['met'] = 'min(%s,999.9999)'%u 
+#vmap['fj1pt'] = 'fj1pt'
 vmap['ndd56'] = 'n2ddt56'
 vmap['ndd53'] = 'n2ddt53'
 
 #weights
 
-weights = {'nominal' : sel.weights[region]%lumi}
+weights = {'nominal' : sel.weights[out_region]%lumi}
 if couplings:
     weights['nominal'] = tTIMES(weights['nominal'],couplings)
 weights.update(shift_btags(couplings))
 
 #Computing n2ddt variables in the ntuples stored inside the basedir directory
 if nddt:
+	print '++++++++++++Starting n2ddt algorithm++++++++++++'
 	for process in os.listdir(basedir):
 		if 'DDT' in process: continue
 		if ".root" in process: process = process.split(".")[0]
+		print '		Process: %s'%process
 		addN2DDT(process)
-
+		print '		Done'
+region = out_region
 factory = forest.RegionFactory(name = region if not(is_test) else 'test',
                                cut = sel.cuts[region],
                                variables = vmap, 
@@ -216,6 +245,7 @@ elif region=='pho':
     factory.add_process(f('SinglePhoton'),'Data',is_data=True)
     #factory.add_process(f('SinglePhoton'),'QCD',is_data=True,
     #                    extra_weights='sf_phoPurity',extra_cut=sel.triggers['pho'])
+    factory.add_process(f('QCD'),'QCD')
 
 #photon fail CR
 elif region=='pho_fail':
@@ -234,40 +264,44 @@ elif out_region not in ['signal_scalar','signal_vector','signal_thq','signal_std
     factory.add_process(f('Diboson'),'Diboson')
     factory.add_process(f('QCD'),'QCD')
 
-    if ('zee' or 'te' or 'wen') == region:
+    if 'zee' == region or 'te' == region or 'wen' == region:
+	extra_w = {}
+	extra_w['nominal'] = '1'
+	
         factory.add_process(f('SingleElectron'),'Data',is_data=True,extra_cut=sel.eleTrigger)
-    	factory.add_process(f('TTbar'),'ttbar')
+    	factory.add_process(f('TTbar'),'ttbar') #need ttbar_weight
 
 
-    if ('zee_fail' or 'te_fail' or 'wen_fail') == region:
+    if 'zee_fail' == region or 'te_fail' == region or 'wen_fail' == region:
         factory.add_process(f('SingleElectron'),'Data',is_data=True,extra_cut=sel.eleTrigger)
+	factory.add_process(f('TTbar'),'ttbar') #need ttbar_weight
 
-
-    if ('zmm' or 'tm' or 'tm_fail' or 'wmn') ==  region:
+    if 'zmm' == region or 'tm' == region or 'tm_fail' == region or 'wmn' ==  region:
         factory.add_process(f('MET'),'Data',is_data=True,extra_cut=sel.metTrigger)
-    	factory.add_process(f('TTbar'),'ttbar')
+    	factory.add_process(f('TTbar'),'ttbar') #without ttbar weight
 
 
-    if ('zmm_fail' or 'wmn_fail')== region:
+    if 'zmm_fail' == region or 'wmn_fail'== region:
         factory.add_process(f('MET'),'Data',is_data=True,extra_cut=sel.metTrigger)
+	factory.add_process(f('TTbar'),'ttbar') #without ttbar weight
 	
 elif out_region in ['signal_scalar','signal_vector','signal_thq','signal_stdm','signal']:
     factory.add_process(f('MET'),'Data',is_data=True,extra_cut=sel.metTrigger)
     factory.add_process(f('ZtoNuNu'),'Zvv')
-    factory.add_process(f('TTbar'),'ttbar'[0])
+    factory.add_process(f('TTbar'),'ttbar')
     factory.add_process(f('ZJets'),'Zll')
     factory.add_process(f('WJets'),'Wlv')
     factory.add_process(f('SingleTop'),'ST')
     factory.add_process(f('Diboson'),'Diboson')
     factory.add_process(f('QCD'),'QCD')
-    factory.add_process(f('ZpA0-600-300'),'ZpA0_600')
-    factory.add_process(f('ZpA0-800-300'),'ZpA0_800')
-    factory.add_process(f('ZpA0-1000-300'),'ZpA0_1000')
-    factory.add_process(f('ZpA0-1200-300'),'ZpA0_1200')
-    factory.add_process(f('ZpA0-1400-300'),'ZpA0_1400')
-    factory.add_process(f('ZpA0-1700-300'),'ZpA0_1700')
-    factory.add_process(f('ZpA0-2000-300'),'ZpA0_2000')
-    factory.add_process(f('ZpA0-2500-300'),'ZpA0_2500')
+    factory.add_process(f('ZpA0-600-400'),'ZpA0_600')
+    factory.add_process(f('ZpA0-800-400'),'ZpA0_800')
+    factory.add_process(f('ZpA0-1000-400'),'ZpA0_1000')
+    factory.add_process(f('ZpA0-1200-400'),'ZpA0_1200')
+    factory.add_process(f('ZpA0-1400-400'),'ZpA0_1400')
+    factory.add_process(f('ZpA0-1700-400'),'ZpA0_1700')
+    factory.add_process(f('ZpA0-2000-400'),'ZpA0_2000')
+    factory.add_process(f('ZpA0-2500-400'),'ZpA0_2500')
     factory.add_process(f('ZpBaryonic-10-1'),'BarZp_10_1')
     factory.add_process(f('ZpBaryonic-10-10'),'BarZp_10_10')
     factory.add_process(f('ZpBaryonic-10-50'),'BarZp_10_50')
@@ -337,7 +371,9 @@ elif out_region=='signal_stdm':
     for m in [300,500,1000]:
         factory.add_process(f('ST_tch_DM-scalar_LO-%i_1-13_TeV'%m),'stdm_%i'%m)
 '''
-forestDir = '/data/t3home000/mcremone/lpc/jorgem/skim/monohiggs_boosted/'
+forestDir = args.output #'/data/t3home000/mcremone/lpc/jorgem/skim/monohiggs_boosted/'
 os.system('mkdir -p %s/%s'%(forestDir,'fittingForest'))
+#if 'fail' in toProcess: factory.run(forestDir+'/fittingForest/fittingForest_%s_fail.root'%(region))
+#else: factory.run(forestDir+'/fittingForest/fittingForest_%s.root'%(region))
 factory.run(forestDir+'/fittingForest/fittingForest_%s.root'%out_region)
 
